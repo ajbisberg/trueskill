@@ -215,14 +215,12 @@ class Tournament:
                 'winner' : {
                     'team' : winner.team.item(),
                     'score' : winner.win_b.item(),
-                    'win_b' : 1,
-                    'players': list(set.union(*sdata[sdata['team']==winner.team.item()].player))
+                    'players': set.union(*sdata[sdata['team']==winner.team.item()].player)
                 },
                 'loser' : {
                     'team' : loser.team.item(),
                     'score' : loser.win_b.item(),
-                    'win_b' : 0,
-                    'players' : list(set.union(*sdata[sdata['team']==loser.team.item()].player))
+                    'players' : set.union(*sdata[sdata['team']==loser.team.item()].player)
                 }
                 
             }
@@ -249,54 +247,16 @@ class Tournament:
                 self.tournament[i-1]['l_ns'] = self.tournament[l_next_idx+i]['id']
         return self.tournament  
 
-    def set_initial_player_ratings(self,env,rating_i=None):
+    def set_initial_player_ratings(self,env):
         # build frame of players
         # set to mean
         names = self.raw_data.player.unique()
-        if rating_i is None:
-            ratings = np.full((1,len(names)),env.Rating())[0]
-            self.players = pd.DataFrame(columns=['player','rating'],data=np.array([names,ratings]).T)
-            self.players.set_index('player',inplace=True)
-        else:
-            self.players = rating_i
-            unseen_players = [n for n in names if n not in rating_i.index] 
-            new_ratings = np.full((1,len(unseen_players)),env.Rating())[0]
-            new_prs = pd.DataFrame(columns=['player','rating'],data=np.array([unseen_players,new_ratings]).T)
-            new_prs.set_index('player',inplace=True)
-            self.players = self.players.append(new_prs)
- 
-    def play_with_players(self,env,use_best_player=False,acc=False):
-        # instead of storing ratings with players, query knowledge source of player ratings
-        i = 0
-        _tournament = list(self.tournament)
-        while len(_tournament) > 0:
-            i += 1
-            sdata = self.tournament[self.tournament.index(_tournament[0])]
-            series = sdata['data']
-            wprs =  list(self.players.loc[series['winner']['players']].rating) 
-            lprs =  list(self.players.loc[series['loser']['players']].rating)
-            if acc:
-                if use_best_player:
-                    best_wp = wprs[np.array([r.mu for r in wprs]).argmax(axis=0)] 
-                    best_lp = lprs[np.array([r.mu for r in lprs]).argmax(axis=0)] 
-                    wp = ts_win_probability([best_wp],[best_lp],env)
-                else:
-                    wp = ts_win_probability(wprs,lprs,env)
-                sdata['correct'] = 1 if wp > 0.5 else 0
-                sdata['max_wp'] = wp
-            new_wprs, new_lprs = env.rate([wprs,lprs])
-            for i,player in enumerate(series['winner']['players']):
-                self.players.at[player,'rating'] = new_wprs[i]
-            for i,player in enumerate(series['loser']['players']):
-                self.players.at[player,'rating'] = new_lprs[i]
-            _tournament.pop(0)
-            # w_next_idx = next((i for i,s in enumerate(_tournament) if s['id'] == sdata['w_ns']),None)
-            # l_next_idx = next((i for i,s in enumerate(_tournament) if s['id'] == sdata['l_ns']),None)
-            # if w_next_idx is not None:
-            #     next_data = self.tournament[w_next_idx+i]['data']   
-            # if l_next_idx is not None:
-            #     next_data = self.tournament[l_next_idx+i]['data']
-        return
+        ratings = np.full((1,len(names)),env.Rating())[0]
+        self.players = pd.DataFrame(columns=['player','rating'],data=np.array([names,ratings]).T)
+
+    def play_with_players(self):
+        # instead of storing ratings with players, query knowledge source of player rratings
+        pass
 
 class Simulation: 
 

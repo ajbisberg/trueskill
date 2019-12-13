@@ -94,38 +94,28 @@ def validate(tourneys,mu,sigma,beta,tau,do_test=False):
     )
     return (wt_avg_metrics, [mu,sigma,beta,tau])
 
+mu = 110
+sigma = mu/15
+beta = sigma
+tau = sigma/10
+print(validate(tourneys,mu,sigma,beta,tau,False))
 
-# mus = [10,25,100,1500,5000,10000]
-# sigmas = [2,8,20,100,500,1000]
+# mu = 1500
+# sigma = 100
+# betas = [10,25,50,100,175,250]
+# taus = [0.01,0.1,1,10,50]
 # cv_args = []
-# for mu in mus:
-#     for sigma in sigmas: 
-#         cv_args.append((tourneys,mu,sigma,None,None))
+# for beta in betas:
+#     for tau in taus: 
+#         cv_args.append((tourneys,mu,sigma,beta,tau))
 
-mu = 1500
-sigma = 100
-betas = [10,25,50,100,175,250]
-taus = [0.01,0.1,1,10,50]
-cv_args = []
-for beta in betas:
-    for tau in taus: 
-        cv_args.append((tourneys,mu,sigma,beta,tau))
-
-pool = multiprocessing.Pool(6)
-cv_metrics = pool.starmap(validate, cv_args)
-rows = []
-for i,cv in enumerate(cv_metrics):
-    m = cv[0]
-    env = cv[1]
-    rows.append([
-        env[0],
-        env[1],
-        env[2],
-        env[3],
-        m[0],
-        m[1],
-        m[2]
-    ])
-cv_metric_frame = pd.DataFrame(columns=['mu','sigma','beta','tau','avg_acc','avg_calib','avg_log_loss'],data=rows)
-cv_metric_frame.to_csv('cv_results_1500_100.csv',index=False)
-print(cv_metric_frame)
+# pool = multiprocessing.Pool(6)
+# cv_metrics = pool.starmap(validate, cv_args)
+# rows = []
+# for i,cv in enumerate(cv_metrics):
+#     m = cv[0]
+#     env = cv[1]
+#     rows.append(env + list(m))
+# cv_metric_frame = pd.DataFrame(columns=['mu','sigma','beta','tau','avg_acc','avg_calib','avg_log_loss'],data=rows)
+# cv_metric_frame.to_csv('cv_results_1500_100.csv',index=False)
+# print(cv_metric_frame)
