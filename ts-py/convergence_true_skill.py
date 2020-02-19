@@ -2,51 +2,43 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import bernoulli
+from scipy.stats import norm
 from sklearn.metrics import mean_squared_error
-from trueskill import Rating, rate_1vs1, global_env, setup
+from trueskill import Rating, rate_1vs1, global_env
 from utils import ts_win_probability
 
-# sigma = 8.33
-# varying_base = 25
-# varying_increment = 10
-# static_base = 20
-# setup(mu=varying_base, sigma=sigma, beta=sigma/2, tau=sigma/100)
-sigma = 8.333
-varying_base = 110
-varying_increment = 10
-static_base = 100
+sigma = 110 / 3
+elliot_base = 110
+ # this is elliot in MBML
+elliot_increment = 10  # elliot skill increases after so many games - first 200 and every 100 after up to 500
 
-# Calculate the game outcomes by varying one players skill score while holding
-# the others static
+# create player pool
+possible_opponents = np.random.normal(loc=125.0, scale=10.0, size=99)
+opponents_for_games = np.random.choice(possible_opponents, size=500)
+
 game_outcomes = []
-win_probs = []
-varying_skill, static_skill = Rating(varying_base, sigma), Rating(static_base, sigma)
-win_prob = ts_win_probability([varying_skill], [static_skill], global_env())
-win_probs.append(win_prob)
-game_outcomes.extend(bernoulli.rvs(win_prob, size=200))
+win_probabilities = []
+elliot_gt_skill = elliot_base
+for index, opponent in enumerate(opponents_for_games):
+    if index in [200, 300, 400]:
+        elliot_gt_skill += elliot_increment
 
-varying_skill, static_skill = Rating(varying_base + varying_increment, sigma), Rating(static_base, sigma)
-win_prob = ts_win_probability([varying_skill], [static_skill], global_env())
-win_probs.append(win_prob)
-game_outcomes.extend(bernoulli.rvs(win_prob, size=100))
-
-varying_skill, static_skill = Rating(varying_base + 2 * varying_increment, sigma), Rating(static_base, sigma)
-win_prob = ts_win_probability([varying_skill], [static_skill], global_env())
-win_probs.append(win_prob)
-game_outcomes.extend(bernoulli.rvs(win_prob, size=100))
-
-varying_skill, static_skill = Rating(varying_base + 3 * varying_increment, sigma), Rating(static_base, sigma)
-win_prob = ts_win_probability([varying_skill], [static_skill], global_env())
-win_probs.append(win_prob)
-game_outcomes.extend(bernoulli.rvs(win_prob, size=100))
+    elliot_wins = 0
+    for i in range(1000):
+        elliot_performance = np.random.normal(loc=elliot_gt_skill, scale=5.0)
+        opponent_performance = np.random.normal(loc=opponent, scale=5.0)
+        if elliot_performance > opponent_performance: elliot_wins += 1
+    win_probability = float(elliot_wins)/1000
+    win_probabilities.append(win_probability)
+    game_outcomes.append(bernoulli.rvs(win_probability))
 
 # Plot ground truth skill for each game
 game_number = np.arange(0, 501)
 ground_truth_skill = np.zeros(game_number.shape)
-ground_truth_skill[0:200] = varying_base
-ground_truth_skill[200:300] = varying_base + varying_increment
-ground_truth_skill[300:400] = varying_base + 2 * varying_increment
-ground_truth_skill[400:501] = varying_base + 3 * varying_increment
+ground_truth_skill[0:200] = elliot_base
+ground_truth_skill[200:300] = elliot_base + elliot_increment
+ground_truth_skill[300:400] = elliot_base + 2 * elliot_increment
+ground_truth_skill[400:501] = elliot_base + 3 * elliot_increment
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(game_number, ground_truth_skill, 'r-', label='Ground Truth Skill')
@@ -57,17 +49,17 @@ fig.savefig('../figures/GroundTruthOnlyTrueSkill.png')
 plt.show()
 
 # Using game outcomes calculate skill for each game using true-skill model
-true_skill_mean = [varying_base]
-true_skill_var = [sigma]
-varying_player, static_player = Rating(varying_base, sigma), Rating(static_base, sigma)
-for game in game_outcomes:
+true_skill_mean = [125]
+true_skill_var = [5]
+elliot_rating = Rating(125, 5)  # intialize
+for index, game in enumerate(game_outcomes):
+    opponent_rating = Rating(opponents_for_games[index], 5.0)
     if game == 1:
-        varying_player, static_player = rate_1vs1(varying_player, static_player)
+        elliot_rating = rate_1vs1(elliot_rating, opponent_rating)[0]
     else:
-        static_player, varying_player = rate_1vs1(static_player, varying_player)
-    true_skill_mean.append(varying_player.mu)
-    true_skill_var.append(varying_player.sigma)
-    static_player = Rating(static_base, sigma)
+        elliot_rating = rate_1vs1(opponent_rating, opponent_rating)[1]
+    true_skill_mean.append(elliot_rating.mu)
+    true_skill_var.append(elliot_rating.sigma)
 
 
 def relative_mse(true, pred):
@@ -95,10 +87,10 @@ ax.legend()
 fig.savefig('../figures/GroundAndTrueSkill.png')
 plt.show()
 
-# Export Data
-data = {'sigma': sigma, 'varying_base': varying_base, 'varying_increment': varying_increment,
-        'static_base': static_base, 'win_probabilities': win_probs, 'mse': mse_true_skill, 'rmse': rmse_true_skill,
-        'game_outcomes': [int(game) for game in game_outcomes]}
-# Export Data
-with open('../model_params/convergTrueSkillParams.json', 'w') as outfile:
-    json.dump(data, outfile, indent=4)
+# # Export Data
+# data = {'sigma': sigma, 'varying_base': elliot_base, 'varying_increment': elliot_increment,
+#         'static_base': static_base, 'win_probabilities': win_probs, 'mse': mse_true_skill, 'rmse': rmse_true_skill,
+#         'game_outcomes': [int(game) for game in game_outcomes]}
+# # Export Data
+# with open('../model_params/convergTrueSkillParams.json', 'w') as outfile:
+#     json.dump(data, outfile, indent=4)
