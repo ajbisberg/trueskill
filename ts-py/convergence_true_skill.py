@@ -4,12 +4,15 @@ import numpy as np
 from scipy.stats import bernoulli
 from scipy.stats import norm
 from sklearn.metrics import mean_squared_error
-from trueskill import Rating, rate_1vs1, global_env
+from trueskill import Rating, rate_1vs1, setup
 from utils import ts_win_probability
 
-sigma = 110 / 3
+mu = 125
+sigma = 5
+beta = sigma / 2
+tau = sigma / 100
+env = setup(mu=mu, sigma=sigma, beta=beta, tau=tau, draw_probability=0)
 elliot_base = 110
- # this is elliot in MBML
 elliot_increment = 10  # elliot skill increases after so many games - first 200 and every 100 after up to 500
 
 # create player pool
@@ -49,17 +52,20 @@ fig.savefig('../figures/GroundTruthOnlyTrueSkill.png')
 plt.show()
 
 # Using game outcomes calculate skill for each game using true-skill model
-true_skill_mean = [125]
-true_skill_var = [5]
-elliot_rating = Rating(125, 5)  # intialize
-for index, game in enumerate(game_outcomes):
-    opponent_rating = Rating(opponents_for_games[index], 5.0)
-    if game == 1:
-        elliot_rating = rate_1vs1(elliot_rating, opponent_rating)[0]
-    else:
-        elliot_rating = rate_1vs1(opponent_rating, opponent_rating)[1]
-    true_skill_mean.append(elliot_rating.mu)
-    true_skill_var.append(elliot_rating.sigma)
+true_skill_mean = [mu]
+true_skill_var = [sigma]
+elliot_rating = env.create_rating()
+for index, opponent in enumerate(opponents_for_games):
+    opponent_rating = env.create_rating(opponent)
+    rating_groups = [
+        {'elliot': elliot_rating},
+        {'opponent': opponent_rating}
+    ]
+    ranking = [int(not game_outcomes[index]), game_outcomes[index]]
+    rated = env.rate(rating_groups, ranks=ranking)
+    true_skill_mean.append(rated[0]['elliot'].mu)
+    true_skill_var.append(rated[0]['elliot'].sigma)
+    elliot_rating = rated[0]['elliot']
 
 
 def relative_mse(true, pred):
@@ -79,6 +85,8 @@ ax.plot(game_number, true_skill_mean, 'b-', label='True Skill (MSE = {:.2f})'.fo
 error_below = np.array(true_skill_mean)-np.array(true_skill_var)
 error_above = np.array(true_skill_mean)+np.array(true_skill_var)
 ax.fill_between(game_number, error_below, error_above, facecolor=(173/256, 216/256, 230/256))
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
 ax.set_xlabel('Number of games')
 ax.set_ylabel('Skill')
 ax.set_xlim(-5, 505)
