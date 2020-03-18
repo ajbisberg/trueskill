@@ -23,14 +23,14 @@ def validate(tourneys,mu,sigma,beta,tau,do_test=False):
 
     default = False
     if default:
-        env = ts.setup(draw_probability=0)
+        env = ts.setup() # draw_probability=0
     else:
         if beta is None:
             beta = sigma/2
         if tau is None:
             tau = sigma/100
     
-    env = ts.setup(mu=mu,sigma=sigma,draw_probability=0,beta=beta,tau=tau)
+    env = ts.setup(mu=mu,sigma=sigma,beta=beta,tau=tau) # draw_probability=0
     print('ts env is:',env)
     rating_i = initialize_rating(Tournament(TournamentData('CWL Champs 2017',data_path).data).raw_data,env)
 
@@ -90,15 +90,12 @@ def validate(tourneys,mu,sigma,beta,tau,do_test=False):
     wt_avg_metrics = (
         round(np.sum(np.multiply(v_out.n_v_series,v_out.v_acc))/np.sum(v_out.n_v_series),3),
         round(np.sum(np.multiply(v_out.n_v_series,v_out.v_calib))/np.sum(v_out.n_v_series),3),
-        round(np.sum(np.multiply(v_out.n_v_series,v_out.v_log_loss))/np.sum(v_out.n_v_series),3)
+        round(np.sum(np.multiply(v_out.n_v_series,v_out.v_log_loss))/np.sum(v_out.n_v_series),3),
+        round(np.std(v_out.v_acc),3),
+        round(np.std(v_out.v_calib),3),
+        round(np.std(v_out.v_log_loss),3),
     )
     return (wt_avg_metrics, [mu,sigma,beta,tau])
-
-mu = 110
-sigma = mu/15
-beta = sigma
-tau = sigma/10
-print(validate(tourneys,mu,sigma,beta,tau,False))
 
 # mu = 1500
 # sigma = 100
@@ -109,13 +106,40 @@ print(validate(tourneys,mu,sigma,beta,tau,False))
 #     for tau in taus: 
 #         cv_args.append((tourneys,mu,sigma,beta,tau))
 
-# pool = multiprocessing.Pool(6)
-# cv_metrics = pool.starmap(validate, cv_args)
-# rows = []
-# for i,cv in enumerate(cv_metrics):
-#     m = cv[0]
-#     env = cv[1]
-#     rows.append(env + list(m))
-# cv_metric_frame = pd.DataFrame(columns=['mu','sigma','beta','tau','avg_acc','avg_calib','avg_log_loss'],data=rows)
-# cv_metric_frame.to_csv('cv_results_1500_100.csv',index=False)
-# print(cv_metric_frame)
+'''
+Recommended values:
+'''
+mus = [25,100,1500]
+# cv_args = []
+# for mu in mus:
+#     sigma = mu/3
+#     beta = sigma/2
+#     tau = sigma/100
+#     cv_args.append((tourneys,mu,sigma,beta,tau))
+
+mu = 25
+sigmas = [mu/1.5,mu/3,mu/15]
+betas = [1,2,5]
+taus = [10,100,1000]
+cv_args = []
+for sigma in sigmas:
+    for b in betas:
+        beta = sigma/b
+        for t in taus: 
+            tau = sigma/t
+            cv_args.append((tourneys,mu,sigma,beta,tau))
+
+pool = multiprocessing.Pool(6)
+cv_metrics = pool.starmap(validate, cv_args)
+rows = []
+for i,cv in enumerate(cv_metrics):
+    m = cv[0]
+    env = cv[1]
+    rows.append(env + list(m))
+cv_metric_frame = pd.DataFrame(columns=[
+    'mu','sigma','beta','tau',
+    'avg_acc','avg_calib','avg_log_loss',
+    'std_acc','std_calib','std_log_loss'
+    ],data=rows)
+cv_metric_frame.to_csv('cv_results_25_Jan_30.csv',index=False)
+print(cv_metric_frame)

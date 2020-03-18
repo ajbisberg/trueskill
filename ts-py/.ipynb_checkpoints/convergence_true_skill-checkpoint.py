@@ -1,5 +1,7 @@
 import json
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rc('font',size=18)
 import numpy as np
 from scipy.stats import bernoulli
 from sklearn.metrics import mean_squared_error
@@ -48,13 +50,13 @@ ground_truth_skill[200:300] = varying_base + varying_increment
 ground_truth_skill[300:400] = varying_base + 2 * varying_increment
 ground_truth_skill[400:501] = varying_base + 3 * varying_increment
 
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(game_number, ground_truth_skill, 'r-', label='Ground Truth Skill')
-ax.set_xlabel('Number of games')
-ax.set_ylabel('Skill')
-ax.legend()
-fig.savefig('../figures/GroundTruthOnlyTrueSkill.png')
-plt.show()
+# fig, ax = plt.subplots(figsize=(10, 5))
+# ax.plot(game_number, ground_truth_skill, 'r-', label='Ground Truth Skill')
+# ax.set_xlabel('Number of games')
+# ax.set_ylabel('Skill')
+# ax.legend()
+# fig.savefig('../figures/GroundTruthOnlyTrueSkill.png',dpi=300)
+# plt.show()
 
 # Using game outcomes calculate skill for each game using true-skill model
 true_skill_mean = [varying_base]
@@ -83,7 +85,7 @@ rmse_true_skill = relative_mse(ground_truth_skill, true_skill_mean)
 # plot results
 fig, ax = plt.subplots(figsize=(8, 5))
 ax.plot(game_number, ground_truth_skill, 'r-', label='Ground Truth Skill')
-ax.plot(game_number, true_skill_mean, 'b-', label='True Skill (MSE = {:.2f})'.format(rmse_true_skill))
+ax.plot(game_number, true_skill_mean, 'b-', label='TrueSkill (MSE = {:.2f})'.format(rmse_true_skill))
 error_below = np.array(true_skill_mean)-np.array(true_skill_var)
 error_above = np.array(true_skill_mean)+np.array(true_skill_var)
 ax.fill_between(game_number, error_below, error_above, facecolor=(173/256, 216/256, 230/256))
@@ -91,8 +93,11 @@ ax.set_xlabel('Number of games')
 ax.set_ylabel('Skill')
 ax.set_xlim(-5, 505)
 ax.set_ylim(100, 145)
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+fig.tight_layout()
 ax.legend()
-fig.savefig('../figures/GroundAndTrueSkill.png')
+fig.savefig('../figures/GroundAndTrueSkill.png',dpi=300)
 plt.show()
 
 # Export Data
