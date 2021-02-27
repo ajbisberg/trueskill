@@ -1,6 +1,6 @@
 from scipy.stats import bernoulli
 import pandas as pd
-import numpy as np
+np = pd.np
 from model_params import mov_exp, mov_lin
 from models import DynamicElo
 import matplotlib.pyplot as plt
@@ -28,12 +28,6 @@ def sim_games(elo):
         win_probability = elo.calc_win_prob(elliot_gt_skill,opponent)
         win_probabilities.append(win_probability)
         game_outcomes.append(bernoulli.rvs(win_probability))
-    print([
-        sum(game_outcomes[0:200])/200,
-        sum(game_outcomes[201:300])/100,
-        sum(game_outcomes[301:401])/100,
-        sum(game_outcomes[401:500])/100,
-    ])
     return opponents_for_games, game_outcomes, true_elliot_skill
 
 def update_skill(elo, opponents_for_games, game_outcomes):
@@ -47,37 +41,27 @@ def update_skill(elo, opponents_for_games, game_outcomes):
         elos.append(elliot)
     return elos
 
-def run_cv():
-    cv_data = []
-    for base_k in [0.5,1,2,3,20]:
-        for cutoff in [1550,1600,1650]:
-            for w90 in [50,100,200]:
-                mov = mov_lin
-                reduction = 0.75
-                elo = DynamicElo(base_k, cutoff, reduction, mov, w90)
-                import ipdb; ipdb.set_trace()
-                opponents_for_games, game_outcomes, true_elliot_skill = sim_games(elo)
-                skill_mean = update_skill(elo,opponents_for_games,game_outcomes)
-                cv_data.append([base_k,cutoff,'mov_lin',w90, relative_mse(np.array(true_elliot_skill),skill_mean), skill_mean])
+cv_data = []
 
-    cv_res = pd.DataFrame(columns=['k','cutoff','mov','w90','RMSE','skill_mean'],data=cv_data)
-    best_vals = cv_res.sort_values('RMSE').reset_index()
-    best_vals[['k','cutoff','mov','w90','RMSE']].to_csv('cv_as_scope_Mar_19.csv',index=False)
-    return best_vals, true_elliot_skill
+for base_k in [0.5,1,2,3,20]:
+    for cutoff in [1550,1600,1650]:
+        for w90 in [50,100,200]:
+            mov = mov_lin
+            reduction = 0.75
+            elo = DynamicElo(base_k, cutoff, reduction, mov, w90)
+            opponents_for_games, game_outcomes, true_elliot_skill = sim_games(elo)
+            skill_mean = update_skill(elo,opponents_for_games,game_outcomes)
+            cv_data.append([base_k,cutoff,'mov_lin',w90, relative_mse(np.array(true_elliot_skill),skill_mean), skill_mean])
 
-best_vals, true_elliot_skill = run_cv()
-top_val = best_vals[:1]
-for _ in range(9):
-    best_vals, true_elliot_skill = run_cv()
-    top_val = top_val.append(best_vals[:1])
-
-print(top_val)
-top_val[['k','cutoff','mov','w90','RMSE']].to_csv('best_as_scope_vals.csv',index=False)
+cv_res = pd.DataFrame(columns=['k','cutoff','mov','w90','RMSE','skill_mean'],data=cv_data)
+best_vals = cv_res.sort_values('RMSE').reset_index()
+print(best_vals[['k','cutoff','mov','w90','RMSE']][:5])
+best_vals[['k','cutoff','mov','w90','RMSE']].to_csv('cv_as_scope_Mar_02.csv',index=False)
 
 if True:
     skill_mean = best_vals['skill_mean'][0]
     fig, ax = plt.subplots()
-    ax.plot(list(range(501)),skill_mean, label='SCOPE Estimate'.format(round(best_vals['RMSE'][0],3)))
+    ax.plot(list(range(501)),skill_mean, label='SCOPE Estimate (RMSE={})'.format(round(best_vals['RMSE'][0],3)))
     ax.plot(list(range(501)),true_elliot_skill, label='Ground Truth Skill')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)

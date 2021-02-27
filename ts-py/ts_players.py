@@ -58,7 +58,7 @@ def validate(tourneys,mu=None,sigma=None,beta=None,tau=None,do_test=False,defaul
             tr_len += len(train.tournament)
         
         validate.set_initial_player_ratings(env,rating_i)
-        validate.play_with_players(env,use_best_player=True,acc=True)
+        validate.play_with_players(env,use_best_player=False,acc=True)
         v_correct = [series['correct'] for series in validate.tournament]
         max_w = [series['max_wp'] for series in validate.tournament]
         v_perf.append(
@@ -96,7 +96,10 @@ def validate(tourneys,mu=None,sigma=None,beta=None,tau=None,do_test=False,defaul
     wt_avg_metrics = (
         round(np.sum(np.multiply(v_out.n_v_series,v_out.v_acc))/np.sum(v_out.n_v_series),3),
         round(np.sum(np.multiply(v_out.n_v_series,v_out.v_calib))/np.sum(v_out.n_v_series),3),
-        round(np.sum(np.multiply(v_out.n_v_series,v_out.v_log_loss))/np.sum(v_out.n_v_series),3)
+        round(np.sum(np.multiply(v_out.n_v_series,v_out.v_log_loss))/np.sum(v_out.n_v_series),3),
+        round(np.std(v_out.v_acc),3),
+        round(np.std(v_out.v_calib),3),
+        round(np.std(v_out.v_log_loss),3),
     )
     return (wt_avg_metrics, [env.mu,env.sigma,env.beta,env.tau])
 
@@ -125,8 +128,10 @@ for i,cv in enumerate(cv_metrics):
     m = cv[0]
     env = cv[1]
     rows.append(env + list(m))
-cv_metric_frame = pd.DataFrame(
-    columns=['mu','sigma','beta','tau','avg_acc','avg_calib','avg_log_loss'],
-    data=rows)
-cv_metric_frame.to_csv('cv_res_best_player.csv',index=False)
+cv_metric_frame = pd.DataFrame(columns=[
+    'mu','sigma','beta','tau',
+    'avg_acc','avg_calib','avg_log_loss',
+    'std_acc','std_calib','std_log_loss'
+    ],data=rows)
+cv_metric_frame.to_csv('cv_res_1500_players_Mar_19.csv',index=False)
 print(cv_metric_frame)

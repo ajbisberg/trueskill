@@ -78,7 +78,7 @@ class Tournament:
         # get series in order
         ordered_series = self.raw_data[['series id','end_dt']] \
             .groupby('series id',as_index=False)['end_dt'].max() \
-            .sort_values('end_dt').reset_index()
+            .sort_values('end_dt').reset_index(drop=True)
 
         for i in range(len(ordered_series)):
             series = self.raw_data[self.raw_data['series id'] == ordered_series.loc[i,'series id']]

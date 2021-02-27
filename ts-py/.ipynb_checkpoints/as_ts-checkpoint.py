@@ -1,6 +1,6 @@
 from scipy.stats import bernoulli
 import pandas as pd
-import numpy as np
+np = pd.np
 from trueskill import Rating, rate_1vs1, global_env, setup
 from utils import ts_win_probability
 import matplotlib.pyplot as plt
@@ -38,12 +38,6 @@ def sim_games(env,fix_variance=True):
 
         win_probabilities.append(win_probability)
         game_outcomes.append(bernoulli.rvs(win_probability))
-    print([
-        sum(game_outcomes[0:200])/200,
-        sum(game_outcomes[201:300])/100,
-        sum(game_outcomes[301:401])/100,
-        sum(game_outcomes[401:500])/100,
-    ])
     return opponents_for_games, game_outcomes, true_elliot_skill
 
 def update_skill(env, opponents_for_games, game_outcomes):
@@ -64,39 +58,29 @@ def update_skill(env, opponents_for_games, game_outcomes):
     return skill_mean, skill_var
 
 mu = 125
-sigma = 5
+# sigma = 5
 # beta = sigma/2
 # tau = sigma/100
 # env = setup(mu=mu,sigma=sigma,beta=beta,tau=tau,draw_probability=0)
 
-def run_cv(mu, sigma):
-    cv_data = []
-    fix_variance = True
-    if fix_variance:
-        opponents_for_games, game_outcomes, true_elliot_skill = sim_games(None,True)
+cv_data = []
+fix_variance = True
+if fix_variance:
+    opponents_for_games, game_outcomes, true_elliot_skill = sim_games(None,True)
 
-    for sigma in [mu/50,mu/25,mu/10,mu/3]:
-        for beta in [sigma/1.5,sigma/2,sigma/5]:
-            for tau in [sigma/200,sigma/100,sigma/50]:
-                env = setup(mu=mu,sigma=sigma,beta=beta,tau=tau,draw_probability=0)
-                if not fix_variance:
-                    opponents_for_games, game_outcomes, true_elliot_skill = sim_games(env,False)
-                skill_mean, skill_var = update_skill(env, opponents_for_games, game_outcomes)
-                cv_data.append([mu, sigma, beta, tau, relative_mse(np.array(true_elliot_skill),skill_mean), skill_mean, skill_var])
+for sigma in [mu/50,mu/25,mu/10,mu/3]:
+    for beta in [sigma/1.5,sigma/2,sigma/5]:
+        for tau in [sigma/200,sigma/100,sigma/50]:
+            env = setup(mu=mu,sigma=sigma,beta=beta,tau=tau,draw_probability=0)
+            if not fix_variance:
+                opponents_for_games, game_outcomes, true_elliot_skill = sim_games(env,False)
+            skill_mean, skill_var = update_skill(env, opponents_for_games, game_outcomes)
+            cv_data.append([mu, sigma, beta, tau, relative_mse(np.array(true_elliot_skill),skill_mean), skill_mean, skill_var])
 
-    cv_res = pd.DataFrame(columns=['mu','sigma','beta','tau','RMSE','skill_mean','skill_var'],data=cv_data)
-    best_vals = cv_res.sort_values('RMSE').reset_index()
-    best_vals[['mu','sigma','beta','tau','RMSE']].to_csv('cv_as_ts_Mar_19.csv',index=False)
-    return best_vals, true_elliot_skill
-
-best_vals, true_elliot_skill = run_cv(mu, sigma)
-top_val = best_vals[:1]
-for _ in range(9):
-    best_vals, true_elliot_skill = run_cv(mu, sigma)
-    top_val = top_val.append(best_vals[:1])
-
-print(top_val)
-top_val[['mu' ,'sigma' ,'beta' ,'tau' ,'RMSE']].to_csv('best_as_ts_vals.csv',index=False)
+cv_res = pd.DataFrame(columns=['mu','sigma','beta','tau','RMSE','skill_mean','skill_var'],data=cv_data)
+best_vals = cv_res.sort_values('RMSE').reset_index()
+print(best_vals[['mu','sigma','beta','tau','RMSE']][:5])
+best_vals[['mu','sigma','beta','tau','RMSE']].to_csv('cv_as_ts_Mar_02.csv',index=False)
 
 if True:
     skill_mean = best_vals['skill_mean'][0]
@@ -104,7 +88,7 @@ if True:
     fig, ax = plt.subplots()
     error_below = np.array(skill_mean)-np.array(skill_var)
     error_above = np.array(skill_mean)+np.array(skill_var)
-    ax.plot(list(range(501)),skill_mean, label='TrueSkill Estimate'.format(round(best_vals['RMSE'][0],3)))
+    ax.plot(list(range(501)),skill_mean, label='TrueSkill Estimate (RMSE={})'.format(round(best_vals['RMSE'][0],3)))
     ax.plot(list(range(501)),true_elliot_skill, label='Ground Truth Skill')
     ax.fill_between(list(range(501)), error_below, error_above, facecolor=(173/256, 216/256, 230/256))
     ax.spines['right'].set_visible(False)

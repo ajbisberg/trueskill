@@ -30,7 +30,7 @@ def validate(tourneys,mu,sigma,beta,tau,do_test=False):
         if tau is None:
             tau = sigma/100
     
-    env = ts.setup(mu=mu,sigma=sigma,beta=beta,tau=tau) # draw_probability=0
+    env = ts.setup(mu=mu,sigma=sigma,beta=beta,tau=tau,draw_probability=0) # 
     print('ts env is:',env)
     rating_i = initialize_rating(Tournament(TournamentData('CWL Champs 2017',data_path).data).raw_data,env)
 
@@ -117,7 +117,7 @@ mus = [25,100,1500]
 #     tau = sigma/100
 #     cv_args.append((tourneys,mu,sigma,beta,tau))
 
-mu = 25
+mu = 1500
 sigmas = [mu/1.5,mu/3,mu/15]
 betas = [1,2,5]
 taus = [10,100,1000]
@@ -126,7 +126,7 @@ for sigma in sigmas:
     for b in betas:
         beta = sigma/b
         for t in taus: 
-            tau = sigma/t
+            tau = sigma/t 
             cv_args.append((tourneys,mu,sigma,beta,tau))
 
 pool = multiprocessing.Pool(6)
@@ -141,5 +141,5 @@ cv_metric_frame = pd.DataFrame(columns=[
     'avg_acc','avg_calib','avg_log_loss',
     'std_acc','std_calib','std_log_loss'
     ],data=rows)
-cv_metric_frame.to_csv('cv_results_25_Jan_30.csv',index=False)
+cv_metric_frame.to_csv('cv_results_1500_Mar_19_dp0.csv',index=False)
 print(cv_metric_frame)
